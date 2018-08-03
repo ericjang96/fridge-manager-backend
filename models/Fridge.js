@@ -10,7 +10,9 @@ var FridgeSchema = new mongoose.Schema({
         amountUnit: String,
         amount: Number
     }]
-});
+    },
+    { versionKey: false }
+);
 
 var Fridge = mongoose.model('fridges', FridgeSchema, 'fridges');
 
