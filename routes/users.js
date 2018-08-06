@@ -6,6 +6,9 @@ const bodyParser = require('body-parser');
 userRouter.use(bodyParser.json());
 userRouter.use(bodyParser.urlencoded({extended:true}));
 
+
+// GET: get every user in the database
+// POST: Add a new user into the database
 userRouter.route('/')
     .get((req, res) => {
         var query = req.query;
@@ -23,7 +26,7 @@ userRouter.route('/')
         res.status(201).send(user);
     })
 
-userRouter.route('/name')
+userRouter.route('/names')
     .get((req,res) => {
         var query = req.query;
         User.find(query, {user_id: 1, _id: 0}).exec()
