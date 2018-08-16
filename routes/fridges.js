@@ -34,6 +34,8 @@ fridgeRouter.route('/ingredients/view')
             { $sort: { _id: 1}}]).exec()
         .then(fridges => res.json(fridges))
         .catch(err => res.send(err));
+
+        console.log("Successfully returned ingredients view");
     })
 
 
@@ -46,15 +48,19 @@ fridgeRouter.route('/ingredients')
         Fridge.find(query, {ingredients: 1, _id: 0}).exec()
         .then(fridges => res.status(200).json(fridges))
         .catch(err => res.status(400).send(err));
+        console.log("Successfully returned ingredients");
     })
     .put((req, res) => {
         var type = req.body.type;
         switch(type){
             case("insert"):
+                console.log("Received an insert request");
                 updateIngredientPutRequest(req, res);
+                console.log("Successfully inserted a new ingredient");
                 break;
             case("delete"):
-                deleteIngredientPutRequest(req, res);
+                console.log("Received a delete request");
+                deleteWholeIngredientPutRequest(req, res);
                 break;
             default:
                 res.status(400).send("Request type was invalid. Please check the body of your request");
@@ -88,32 +94,23 @@ function updateIngredientPutRequest(req, res){
     }
 };
 
-function deleteIngredientPutRequest(req, res){
-    if(!checkIngredientRequestValid(req.body)){
-        res.status(400).send("There was an error in the request: \n" + JSON.stringify(req.body) + "\nPlease make sure the request is well formed");
-    }
-    else{
-        let ingred = new Ingredient(
-            req.body.name,
-            req.body.boughtDate,
-            req.body.expiryDate,
-            req.body.amountUnit,
-            req.body.amount
-        );
-        // TODO: Have better error handling
+// If ingredient not found, throw error
+function deleteWholeIngredientPutRequest(req, res){
+    name = req.body.name;
 
-    
-        Fridge.update(
-            { "fridge_id": "dummy_fridge_id" },
-            { $pull: { ingredients : { "_id" : req.body._id }}},
-            function(err, data){
-                if(err != null){
-                    console.log(err);
-                }
-            });
-
-        res.status(201).send(ingred);
-    }
+    Fridge.findOneAndUpdate(
+        {$and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients.name": name}]},
+        { $pull: { ingredients : { "name" : name }}},
+        function(err, docs){
+            if(docs == null){
+                console.log("Could not delete " + name + " since it does not exist");
+                res.status(400).send(name + " does not exist and cannot be deleted");
+            }
+            else{
+                console.log("Successfully deleted an ingredient");
+                res.status(201).send(name + " was successfully removed");
+            }
+        });
 };
 
 // Is this really the best way to check if request is valid?
@@ -129,5 +126,9 @@ function checkIngredientRequestValid(body){
 
     return true;
 };
+
+function nameExistsInDatabase(name){
+
+}
 
 module.exports = fridgeRouter;
