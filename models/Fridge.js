@@ -5,8 +5,8 @@ var FridgeSchema = new mongoose.Schema({
     user_ids: [String],
     ingredients: [{
         name: String,
-        boughtDate: String,
-        expiryDate: String,
+        boughtDate: Date,
+        expiryDate: Date,
         amountUnit: String,
         amount: Number
     }]

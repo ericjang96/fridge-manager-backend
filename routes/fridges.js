@@ -55,12 +55,18 @@ fridgeRouter.route('/ingredients')
         switch(type){
             case("insert"):
                 console.log("Received an insert request");
-                updateIngredientPutRequest(req, res);
+                insertIngredientPutRequest(req, res);
                 console.log("Successfully inserted a new ingredient");
+                break;
+            case("removeAmount"):
+                console.log("Received an remove amount request");
+                removeIngredientAmount(req, res);
+                console.log("Successfully removed requested amount");
                 break;
             case("delete"):
                 console.log("Received a delete request");
                 deleteWholeIngredientPutRequest(req, res);
+                console.log("Successfully deleted the ingredient");
                 break;
             default:
                 res.status(400).send("Request type was invalid. Please check the body of your request");
@@ -68,15 +74,23 @@ fridgeRouter.route('/ingredients')
     })
 
 
-function updateIngredientPutRequest(req, res){
-    if(!checkIngredientRequestValid(req.body)){
+function insertIngredientPutRequest(req, res){
+    if(!checkInsertIngredientRequestValid(req.body)){
         res.status(400).send("There was an error in the request: \n" + JSON.stringify(req.body) + "\nPlease make sure the request is well formed");
     }
     else{
-        let ingred = new Ingredient(
+        var boughtDateEpoch = parseFloat(req.body.boughtDate);
+        var expiryDateEpoch = parseFloat(req.body.expiryDate);
+
+        // Use the epoch time (in milliseconds) to calculate date;
+        // Worth noting that mongodb uses UTC by default
+        var boughtDate = new Date(boughtDateEpoch).toLocaleString();
+        var expiryDate = new Date(expiryDateEpoch).toLocaleString();
+
+        var ingred = new Ingredient(
             req.body.name,
-            req.body.boughtDate,
-            req.body.expiryDate,
+            boughtDate,
+            expiryDate,
             req.body.amountUnit,
             req.body.amount
         );
@@ -96,7 +110,7 @@ function updateIngredientPutRequest(req, res){
 
 // If ingredient not found, throw error
 function deleteWholeIngredientPutRequest(req, res){
-    name = req.body.name;
+    var name = req.body.name;
 
     Fridge.findOneAndUpdate(
         {$and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients.name": name}]},
@@ -113,8 +127,62 @@ function deleteWholeIngredientPutRequest(req, res){
         });
 };
 
+
+function removeIngredientAmount(req, res){
+    try{
+        removeFromFirstIngredient(req.body.name, req.body.amount);
+        res.status(201).send("Successfully removed " + req.body.amount + " from " + req.body.name);
+    }
+    catch(e){
+        res.status(400).send(e);
+    }
+
+}
+
+function removeFromFirstIngredient(name, amount){
+    Fridge.aggregate([
+        { $unwind: "$ingredients"},
+        { $match:  {$and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients.name": name}]} },
+        { $sort: { "ingredients.boughtDate" : 1}},
+        { $group:
+             {
+               _id: "$ingredients.name",
+               objectID: { $first: "$ingredients._id" },
+			   amount: { $first: "$ingredients.amount"}
+             }
+        }
+    ]).exec()
+    .then(object => {
+        var objectID = object[0]["objectID"];
+        var heldAmount = parseInt(object[0]["amount"]);
+        var requestedAmount = parseInt(amount);
+
+        // This current item has more than what we wanted to remove
+        if(heldAmount >= requestedAmount){
+            var newValue = heldAmount - requestedAmount;
+            Fridge.findOneAndUpdate(
+                { $and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients._id": objectID}]},
+                { $set: { "ingredients.$.amount": newValue}}
+            ).exec();
+        }
+        else{
+            var remainder = requestedAmount - heldAmount;
+            Fridge.findOneAndUpdate(
+                { $and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients._id": objectID}]},
+                { $pull: { ingredients : { "_id" : objectID }}}
+            ).exec()
+            .then(res => {
+                removeFromFirstIngredient(name, remainder);
+            });
+        }
+    })
+    .catch(err => {
+        throw err;
+    });
+}
+
 // Is this really the best way to check if request is valid?
-function checkIngredientRequestValid(body){
+function checkInsertIngredientRequestValid(body){
     if(body.name === undefined 
         || body.boughtDate === undefined 
         || body.expiryDate === undefined
@@ -126,9 +194,5 @@ function checkIngredientRequestValid(body){
 
     return true;
 };
-
-function nameExistsInDatabase(name){
-
-}
 
 module.exports = fridgeRouter;
