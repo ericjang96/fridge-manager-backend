@@ -16,6 +16,20 @@ fridgeRouter.route('/')
         .then(fridges => res.json(fridges))
         .catch(err => res.send(err));
     })
+    .post((req, res) => {
+        var userArray = [];
+        userArray.push(req.body.user_id);
+        var fridge = new Fridge({
+            fridge_id: req.body.fridge_id,
+            user_ids: userArray
+        });
+
+        fridge.save();
+        console.log("Saved fridge:");
+        console.log(fridge);
+        res.status(201).send(fridge);
+
+    })
 
 // Aggregate the ingredients by fridge id
 fridgeRouter.route('/ingredients/view')
@@ -56,17 +70,14 @@ fridgeRouter.route('/ingredients')
             case("insert"):
                 console.log("Received an insert request");
                 insertIngredientPutRequest(req, res);
-                console.log("Successfully inserted a new ingredient");
                 break;
             case("removeAmount"):
                 console.log("Received an remove amount request");
                 removeIngredientAmount(req, res);
-                console.log("Successfully removed requested amount");
                 break;
             case("delete"):
                 console.log("Received a delete request");
                 deleteWholeIngredientPutRequest(req, res);
-                console.log("Successfully deleted the ingredient");
                 break;
             default:
                 res.status(400).send("Request type was invalid. Please check the body of your request");
@@ -105,6 +116,7 @@ function insertIngredientPutRequest(req, res){
             })
 
         res.status(201).send(ingred);
+        console.log("Successfully inserted a new ingredient");
     }
 };
 
@@ -119,10 +131,12 @@ function deleteWholeIngredientPutRequest(req, res){
             if(docs == null){
                 console.log("Could not delete " + name + " since it does not exist");
                 res.status(400).send(name + " does not exist and cannot be deleted");
+                console.log(err);
             }
             else{
                 console.log("Successfully deleted an ingredient");
                 res.status(201).send(name + " was successfully removed");
+                console.log("Successfully deleted the ingredient");
             }
         });
 };
@@ -130,19 +144,21 @@ function deleteWholeIngredientPutRequest(req, res){
 
 function removeIngredientAmount(req, res){
     try{
-        removeFromFirstIngredient(req.body.name, req.body.amount);
+        removeFromFirstIngredient(req.body.name, req.body.amount, req.body.fridge_id);
         res.status(201).send({"response": "Successfully removed " + req.body.amount + " from " + req.body.name});
+        console.log("Successfully removed requested amount");
     }
     catch(e){
         res.status(400).send(e);
+        console.log(e);
     }
 
 }
 
-function removeFromFirstIngredient(name, amount){
+function removeFromFirstIngredient(name, amount, fridge_id){
     Fridge.aggregate([
         { $unwind: "$ingredients"},
-        { $match:  {$and: [{"fridge_id": req.body.fridge_id}, {"ingredients.name": name}]} },
+        { $match:  {$and: [{"fridge_id": fridge_id}, {"ingredients.name": name}]} },
         { $sort: { "ingredients.boughtDate" : 1}},
         { $group:
              {
@@ -161,18 +177,18 @@ function removeFromFirstIngredient(name, amount){
         if(heldAmount >= requestedAmount){
             var newValue = heldAmount - requestedAmount;
             Fridge.findOneAndUpdate(
-                { $and: [{"fridge_id": req.body.fridge_id}, {"ingredients._id": objectID}]},
+                { $and: [{"fridge_id": fridge_id}, {"ingredients._id": objectID}]},
                 { $set: { "ingredients.$.amount": newValue}}
             ).exec();
         }
         else{
             var remainder = requestedAmount - heldAmount;
             Fridge.findOneAndUpdate(
-                { $and: [{"fridge_id": req.body.fridge_id}, {"ingredients._id": objectID}]},
+                { $and: [{"fridge_id": fridge_id}, {"ingredients._id": objectID}]},
                 { $pull: { ingredients : { "_id" : objectID }}}
             ).exec()
             .then(res => {
-                removeFromFirstIngredient(name, remainder);
+                removeFromFirstIngredient(name, remainder, fridge_id);
             });
         }
     })
