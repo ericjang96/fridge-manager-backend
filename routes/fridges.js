@@ -96,7 +96,7 @@ function insertIngredientPutRequest(req, res){
         );
         // TODO: Have better error handling
         Fridge.findOneAndUpdate(
-            {"fridge_id": "dummy_fridge_id"},
+            {"fridge_id": req.body.fridge_id},
             { $push: { "ingredients": ingred}},
             function(err, data){
                 if(err != null){
@@ -113,7 +113,7 @@ function deleteWholeIngredientPutRequest(req, res){
     var name = req.body.name;
 
     Fridge.findOneAndUpdate(
-        {$and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients.name": name}]},
+        {$and: [{"fridge_id": req.body.fridge_id}, {"ingredients.name": name}]},
         { $pull: { ingredients : { "name" : name }}},
         function(err, docs){
             if(docs == null){
@@ -131,7 +131,7 @@ function deleteWholeIngredientPutRequest(req, res){
 function removeIngredientAmount(req, res){
     try{
         removeFromFirstIngredient(req.body.name, req.body.amount);
-        res.status(201).send("Successfully removed " + req.body.amount + " from " + req.body.name);
+        res.status(201).send({"response": "Successfully removed " + req.body.amount + " from " + req.body.name});
     }
     catch(e){
         res.status(400).send(e);
@@ -142,7 +142,7 @@ function removeIngredientAmount(req, res){
 function removeFromFirstIngredient(name, amount){
     Fridge.aggregate([
         { $unwind: "$ingredients"},
-        { $match:  {$and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients.name": name}]} },
+        { $match:  {$and: [{"fridge_id": req.body.fridge_id}, {"ingredients.name": name}]} },
         { $sort: { "ingredients.boughtDate" : 1}},
         { $group:
              {
@@ -161,14 +161,14 @@ function removeFromFirstIngredient(name, amount){
         if(heldAmount >= requestedAmount){
             var newValue = heldAmount - requestedAmount;
             Fridge.findOneAndUpdate(
-                { $and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients._id": objectID}]},
+                { $and: [{"fridge_id": req.body.fridge_id}, {"ingredients._id": objectID}]},
                 { $set: { "ingredients.$.amount": newValue}}
             ).exec();
         }
         else{
             var remainder = requestedAmount - heldAmount;
             Fridge.findOneAndUpdate(
-                { $and: [{"fridge_id": "dummy_fridge_id"}, {"ingredients._id": objectID}]},
+                { $and: [{"fridge_id": req.body.fridge_id}, {"ingredients._id": objectID}]},
                 { $pull: { ingredients : { "_id" : objectID }}}
             ).exec()
             .then(res => {

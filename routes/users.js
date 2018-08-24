@@ -20,9 +20,12 @@ userRouter.route('/')
         var user = new User({
             user_id: req.body.user_id,
             password: req.body.password,
-            fridge_id: req.body.fridge_id
+            fridge_id: req.body.fridge_id,
+            email: req.body.email
         });
-        user.save()
+        user.save();
+        console.log("Saved user:");
+        console.log(user);
         res.status(201).send(user);
     })
 
