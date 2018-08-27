@@ -46,8 +46,8 @@ fridgeRouter.route('/ingredients/view')
                 }
             },
             { $sort: { _id: 1}}]).exec()
-        .then(fridges => res.json(fridges))
-        .catch(err => res.send(err));
+        .then(fridges => res.status(200).json(fridges))
+        .catch(err => res.status(400).send(err));
 
         console.log("Successfully returned ingredients view");
     })

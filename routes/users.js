@@ -13,8 +13,8 @@ userRouter.route('/')
     .get((req, res) => {
         var query = req.query;
         User.find(query).exec()
-        .then(users => res.json(users))
-        .catch(err => res.send(err));
+        .then(users => res.status(200).json(users))
+        .catch(err => res.status(400).send(err));
     })
     .post((req, res) => {
         var user = new User({
@@ -33,8 +33,8 @@ userRouter.route('/names')
     .get((req,res) => {
         var query = req.query;
         User.find(query, {user_id: 1, _id: 0}).exec()
-        .then(users => res.json(users))
-        .catch(err => res.send(err));
+        .then(users => res.status(200).json(users))
+        .catch(err => res.status(400).send(err));
     })
 
 module.exports = userRouter;
