@@ -1,9 +1,8 @@
 var express = require('express');
 var fridgeRouter = express.Router();
 var Fridge = require('../models/Fridge.js');
-var FridgeView = require('../models/FridgeView.js');
 const bodyParser = require('body-parser');
-const Ingredient = require('../models/Ingredient');
+const Ingredient = require('../domain_models/Ingredient.js');
 
 fridgeRouter.use(bodyParser.json());
 fridgeRouter.use(bodyParser.urlencoded({extended:true}));
@@ -13,8 +12,8 @@ fridgeRouter.route('/')
     .get((req, res) => {
         var query = req.query;
         Fridge.find(query).exec()
-        .then(fridges => res.json(fridges))
-        .catch(err => res.send(err));
+        .then(fridges => res.status(200).json(fridges))
+        .catch(err => res.status(400).send(err));
     })
     .post((req, res) => {
         var userArray = [];

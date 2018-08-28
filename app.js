@@ -5,6 +5,7 @@ var url = 'mongodb://localhost:27017/fmDB';
 var bodyParser = require('body-parser');
 var fridge = require('./routes/fridges.js');
 var user = require('./routes/users.js');
+var groceryLists = require('./routes/groceryLists.js');
 
 initializeApp(app);
 
@@ -19,6 +20,7 @@ function initializeApp(app){
 	mongoose.connect(url,{ useNewUrlParser: true });
 	app.use('/fridges', fridge);
 	app.use('/users', user);
+	app.use('/groceryLists', groceryLists);
 	app.use(bodyParser.json());
 	app.use(bodyParser.urlencoded({extended: true}));
 }
