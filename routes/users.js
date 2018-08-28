@@ -29,20 +29,22 @@ userRouter.route('/')
         console.log(user);
         res.status(201).send(user);
     })
-    .put((req, res) => {
-        var list = new UserGroceryList(req.body.name, req.body.grocery_list_id);
-        // TODO: Have better error handling
-        User.findOneAndUpdate(
-            {"user_id": req.body.user_id},
-            { $push: { "groceryLists": list}},
-            function(err, data){
-                if(err != null){
-                    console.log(err);
-                }
-            })
 
-        res.status(201).send(list);
-        console.log("Successfully inserted a new grocery list");
+userRouter.route('/groceryLists')
+    .put((req, res) => {
+        var type = req.body.type;
+        switch(type){
+            case("insert"):
+                console.log("inserting new list...");
+                insertGroceryList(req, res);
+                break;
+            case("delete"):
+                console.log("deleting list...");
+                deleteGroceryList(req, res);
+                break;
+            default:
+                console.log("invalid type");
+        }
     })
 
 userRouter.route('/names')
@@ -52,5 +54,35 @@ userRouter.route('/names')
         .then(users => res.status(200).send(users))
         .catch(err => res.status(400).send(err));
     })
+
+function insertGroceryList(req, res){
+    var list = new UserGroceryList(req.body.name, req.body.grocery_list_id);
+    // TODO: Have better error handling
+    User.findOneAndUpdate(
+        {"user_id": req.body.user_id},
+        { $push: { "groceryLists": list}},
+        function(err, data){
+            if(err != null){
+                console.log(err);
+            }
+        })
+
+    res.status(201).send(list);
+    console.log("Successfully inserted a new grocery list");
+}
+
+function deleteGroceryList(req, res){
+    User.findOneAndUpdate(
+        {"user_id": req.body.user_id},
+        { $pull: { "groceryLists": {"name": req.body.name} }},
+        function(err, data){
+            if(err != null){
+                console.log(err);
+            }
+        })
+
+    res.status(201).send("Successfully deleted " + req.body.name);
+    console.log("Successfully deleted a grocery list");
+}
 
 module.exports = userRouter;
